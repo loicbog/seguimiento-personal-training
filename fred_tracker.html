@@ -254,10 +254,10 @@ const MUSCLE_COLORS = {
   Hombro:  { bg:"rgba(251,191,36,0.12)",  text:"#fbbf24", border:"rgba(251,191,36,0.3)"  },
 };
 
-const GITHUB_TOKEN = "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";
 const GITHUB_REPO = "loicbog/seguimiento-personal-training";
 const GITHUB_FILE = "fred_data.json";
 const GITHUB_API  = `https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_FILE}`;
+const TOKEN_KEY   = "fred-github-token";
 
 let workoutData = JSON.parse(JSON.stringify(INITIAL_DATA));
 let activeTab = "A";
@@ -266,13 +266,34 @@ let formSession = "A";
 let formDate = "";
 let formValues = {};
 let step = "form";
-let githubFileSha = null; // needed to update the file
+let githubFileSha = null;
+
+function getToken() {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+function promptToken() {
+  const t = prompt("Entre le token GitHub pour activer la sauvegarde :");
+  if (t && t.trim()) {
+    localStorage.setItem(TOKEN_KEY, t.trim());
+    return t.trim();
+  }
+  return null;
+}
 
 async function loadFromStorage() {
+  let token = getToken();
+  if (!token) token = promptToken();
+  if (!token) { renderAll(); return; }
   try {
     const res = await fetch(GITHUB_API, {
-      headers: { Authorization: `token ${GITHUB_TOKEN}` }
+      headers: { Authorization: `token ${token}` }
     });
+    if (res.status === 401) {
+      localStorage.removeItem(TOKEN_KEY);
+      alert("Token invalide. Recharge la page et entre un token valide.");
+      renderAll(); return;
+    }
     if (res.ok) {
       const json = await res.json();
       githubFileSha = json.sha;
@@ -284,6 +305,8 @@ async function loadFromStorage() {
 }
 
 async function saveToStorage() {
+  const token = getToken();
+  if (!token) { alert("Pas de token, sauvegarde impossible."); return; }
   try {
     const content = btoa(unescape(encodeURIComponent(JSON.stringify(workoutData))));
     const body = {
@@ -294,7 +317,7 @@ async function saveToStorage() {
     const res = await fetch(GITHUB_API, {
       method: "PUT",
       headers: {
-        Authorization: `token ${GITHUB_TOKEN}`,
+        Authorization: `token ${token}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify(body)
