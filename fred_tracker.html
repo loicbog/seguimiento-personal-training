@@ -254,27 +254,58 @@ const MUSCLE_COLORS = {
   Hombro:  { bg:"rgba(251,191,36,0.12)",  text:"#fbbf24", border:"rgba(251,191,36,0.3)"  },
 };
 
-const STORAGE_KEY = "fred-workout-v1";
+const GITHUB_TOKEN = "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";
+const GITHUB_REPO = "loicbog/seguimiento-personal-training";
+const GITHUB_FILE = "fred_data.json";
+const GITHUB_API  = `https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_FILE}`;
+
 let workoutData = JSON.parse(JSON.stringify(INITIAL_DATA));
 let activeTab = "A";
 let openCards = {};
 let formSession = "A";
 let formDate = "";
-let formValues = {}; // { exId: [{ c, r }, ...] }
+let formValues = {};
 let step = "form";
+let githubFileSha = null; // needed to update the file
 
 async function loadFromStorage() {
   try {
-    const result = await window.storage.get(STORAGE_KEY);
-    if (result && result.value) workoutData = JSON.parse(result.value);
-  } catch(e) {}
+    const res = await fetch(GITHUB_API, {
+      headers: { Authorization: `token ${GITHUB_TOKEN}` }
+    });
+    if (res.ok) {
+      const json = await res.json();
+      githubFileSha = json.sha;
+      const decoded = JSON.parse(atob(json.content.replace(/\n/g, "")));
+      workoutData = decoded;
+    }
+  } catch(e) { console.warn("Pas de données GitHub, utilisation des données initiales."); }
   renderAll();
 }
 
 async function saveToStorage() {
   try {
-    await window.storage.set(STORAGE_KEY, JSON.stringify(workoutData));
-  } catch(e) { console.error("Storage error:", e); }
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(workoutData))));
+    const body = {
+      message: "Mise à jour séance",
+      content,
+      ...(githubFileSha ? { sha: githubFileSha } : {})
+    };
+    const res = await fetch(GITHUB_API, {
+      method: "PUT",
+      headers: {
+        Authorization: `token ${GITHUB_TOKEN}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    });
+    if (res.ok) {
+      const json = await res.json();
+      githubFileSha = json.content.sha;
+    } else {
+      console.error("Erreur GitHub:", await res.text());
+    }
+  } catch(e) { console.error("Erreur sauvegarde:", e); }
 }
 
 function totalSessions() {
