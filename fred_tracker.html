@@ -312,15 +312,16 @@ async function saveToStorage() {
   const token = getToken();
   if (!token) { alert("Pas de token, sauvegarde impossible."); return; }
   try {
-    // Récupérer le sha actuel si on ne l'a pas encore
-    if (!githubFileSha) {
-      const check = await fetch(GITHUB_API, {
-        headers: { Authorization: `token ${token}` }
-      });
-      if (check.ok) {
-        const existing = await check.json();
-        githubFileSha = existing.sha;
-      }
+    // Toujours récupérer le sha frais pour éviter les conflits
+    const check = await fetch(GITHUB_API, {
+      headers: { Authorization: `token ${token}` }
+    });
+    if (check.ok) {
+      const existing = await check.json();
+      githubFileSha = existing.sha;
+    } else if (check.status !== 404) {
+      alert("Erreur lecture GitHub : " + check.status);
+      return;
     }
     const content = btoa(unescape(encodeURIComponent(JSON.stringify(workoutData, null, 2))));
     const body = {
