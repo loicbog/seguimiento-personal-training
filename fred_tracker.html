@@ -294,6 +294,10 @@ async function loadFromStorage() {
       alert("Token invalide. Recharge la page et entre un token valide.");
       renderAll(); return;
     }
+    if (res.status === 404) {
+      // Fichier pas encore créé, on part des données initiales
+      renderAll(); return;
+    }
     if (res.ok) {
       const json = await res.json();
       githubFileSha = json.sha;
