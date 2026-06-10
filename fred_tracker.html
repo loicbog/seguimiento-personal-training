@@ -312,7 +312,17 @@ async function saveToStorage() {
   const token = getToken();
   if (!token) { alert("Pas de token, sauvegarde impossible."); return; }
   try {
-    const content = btoa(unescape(encodeURIComponent(JSON.stringify(workoutData))));
+    // Récupérer le sha actuel si on ne l'a pas encore
+    if (!githubFileSha) {
+      const check = await fetch(GITHUB_API, {
+        headers: { Authorization: `token ${token}` }
+      });
+      if (check.ok) {
+        const existing = await check.json();
+        githubFileSha = existing.sha;
+      }
+    }
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(workoutData, null, 2))));
     const body = {
       message: "Mise à jour séance",
       content,
@@ -330,7 +340,9 @@ async function saveToStorage() {
       const json = await res.json();
       githubFileSha = json.content.sha;
     } else {
-      console.error("Erreur GitHub:", await res.text());
+      const err = await res.text();
+      console.error("Erreur GitHub:", err);
+      alert("Erreur sauvegarde : " + err);
     }
   } catch(e) { console.error("Erreur sauvegarde:", e); }
 }
