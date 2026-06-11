@@ -304,7 +304,7 @@ async function loadFromStorage() {
     if (res.ok) {
       const json = await res.json();
       githubFileSha = json.sha;
-      const decoded = JSON.parse(atob(json.content.replace(/\n/g, "")));
+      const decoded = JSON.parse(decodeURIComponent(escape(atob(json.content.replace(/\n/g, "")))));
       workoutData = decoded;
     }
   } catch(e) { console.warn("Pas de données GitHub, utilisation des données initiales."); }
@@ -326,7 +326,7 @@ async function saveToStorage() {
       alert("Erreur lecture GitHub : " + check.status);
       return;
     }
-    const content = btoa(unescape(encodeURIComponent(JSON.stringify(workoutData, null, 2))));
+    const content = btoa(encodeURIComponent(JSON.stringify(workoutData, null, 2)).replace(/%([0-9A-F]{2})/g, (_, p1) => String.fromCharCode(parseInt(p1, 16))));
     const body = {
       message: "Mise à jour séance",
       content,
