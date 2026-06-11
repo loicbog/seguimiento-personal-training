@@ -37,7 +37,10 @@
   .panel.active { display: block; }
 
   .pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 0.875rem; }
-  .pill { font-size: 10px; padding: 3px 10px; border-radius: 20px; letter-spacing: 0.04em; }
+  .pill { font-size: 10px; padding: 3px 10px; border-radius: 20px; letter-spacing: 0.04em; display: flex; align-items: center; gap: 5px; }
+  .pill-actions { display: flex; gap: 3px; }
+  .pill-btn { background: none; border: none; cursor: pointer; font-size: 10px; padding: 0 2px; opacity: 0.6; line-height: 1; }
+  .pill-btn:hover { opacity: 1; }
 
   .add-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin-bottom: 12px; padding: 0.65rem; background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.35); border-radius: 10px; color: var(--green); font-size: 13px; font-weight: 700; cursor: pointer; letter-spacing: 0.05em; font-family: inherit; }
 
@@ -382,7 +385,14 @@ function renderPanel(key) {
 
   let html = `
     <div class="pills">
-      ${dates.map(d => `<span class="pill" style="background:${def.colorBg};border:1px solid ${def.colorBorder};color:${def.color}">${d}</span>`).join("")}
+      ${dates.map((d, si) => `
+        <span class="pill" style="background:${def.colorBg};border:1px solid ${def.colorBorder};color:${def.color}">
+          ${d}
+          <span class="pill-actions">
+            <button class="pill-btn" style="color:${def.color}" onclick="editSession('${key}',${si})" title="Éditer">✏️</button>
+            <button class="pill-btn" style="color:var(--red)" onclick="deleteSession('${key}',${si})" title="Supprimer">🗑️</button>
+          </span>
+        </span>`).join("")}
     </div>
     <button class="add-btn" onclick="openModal('${key}')">+ Ajouter une séance</button>
     <div class="section-title">Ejercicios</div>
@@ -465,8 +475,40 @@ function showPanel(key) {
   activeTab = key;
 }
 
+let editIndex = null; // index de la session en cours d'édition
+
+function editSession(key, si) {
+  formSession = key;
+  editIndex = si;
+  formDate = workoutData[key].sessions[si];
+  formValues = {};
+  SESSIONS_DEF[key].exercises.forEach(ex => {
+    const existing = (workoutData[key].data[ex.id] || [])[si] || [];
+    formValues[ex.id] = Array.from({length: ex.sets}, (_, i) => ({
+      c: existing[i]?.c || "",
+      r: existing[i]?.r || "",
+    }));
+  });
+  step = "form";
+  renderModal();
+  document.getElementById("overlay").classList.add("open");
+}
+
+async function deleteSession(key, si) {
+  if (!confirm(`Supprimer la séance du ${workoutData[key].sessions[si]} ?`)) return;
+  workoutData[key].sessions.splice(si, 1);
+  SESSIONS_DEF[key].exercises.forEach(ex => {
+    if (workoutData[key].data[ex.id]) {
+      workoutData[key].data[ex.id].splice(si, 1);
+    }
+  });
+  await saveToStorage();
+  renderAll();
+}
+
 function openModal(key) {
   formSession = key;
+  editIndex = null;
   formDate = "";
   formValues = {};
   SESSIONS_DEF[key].exercises.forEach(ex => {
@@ -487,7 +529,7 @@ function updateFormVal(exId, setIdx, field, val) {
 
 function renderModal() {
   const def = SESSIONS_DEF[formSession];
-  document.getElementById("modal-title").textContent = step==="confirm" ? "Confirmer ?" : "Nouvelle séance";
+  document.getElementById("modal-title").textContent = step==="confirm" ? "Confirmer ?" : (editIndex !== null ? "Éditer séance" : "Nouvelle séance");
 
   if (step === "saved") {
     document.getElementById("modal-body").innerHTML = `<div class="saved-msg">✓ Séance enregistrée !</div>`;
@@ -580,15 +622,29 @@ function goConfirm() {
 
 async function saveSession() {
   const key = formSession;
-  workoutData[key].sessions.push(formDate.trim());
-  SESSIONS_DEF[key].exercises.forEach(ex => {
-    const sets = (formValues[ex.id] || []).map(s => ({
-      c: (s.c||"").trim() || "—",
-      r: (s.r||"").trim() || "—",
-    }));
-    if (!workoutData[key].data[ex.id]) workoutData[key].data[ex.id] = [];
-    workoutData[key].data[ex.id].push(sets);
-  });
+  if (editIndex !== null) {
+    // Mode édition : remplacer la session existante
+    workoutData[key].sessions[editIndex] = formDate.trim();
+    SESSIONS_DEF[key].exercises.forEach(ex => {
+      const sets = (formValues[ex.id] || []).map(s => ({
+        c: (s.c||"").trim() || "—",
+        r: (s.r||"").trim() || "—",
+      }));
+      if (!workoutData[key].data[ex.id]) workoutData[key].data[ex.id] = [];
+      workoutData[key].data[ex.id][editIndex] = sets;
+    });
+  } else {
+    // Mode ajout : nouvelle session
+    workoutData[key].sessions.push(formDate.trim());
+    SESSIONS_DEF[key].exercises.forEach(ex => {
+      const sets = (formValues[ex.id] || []).map(s => ({
+        c: (s.c||"").trim() || "—",
+        r: (s.r||"").trim() || "—",
+      }));
+      if (!workoutData[key].data[ex.id]) workoutData[key].data[ex.id] = [];
+      workoutData[key].data[ex.id].push(sets);
+    });
+  }
   await saveToStorage();
   step = "saved";
   renderModal();
