@@ -125,7 +125,7 @@
 <div class="overlay" id="overlay">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-title" id="modal-title">Nouvelle séance</div>
+      <div class="modal-title" id="modal-title">Nueva sesión</div>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
     <div id="modal-body"></div>
@@ -318,7 +318,7 @@ function getToken() {
 }
 
 function promptToken() {
-  const t = prompt("Entre le token GitHub pour activer la sauvegarde :");
+  const t = prompt("Introduce el token de GitHub para activar el guardado:");
   if (t && t.trim()) {
     localStorage.setItem(TOKEN_KEY, t.trim());
     return t.trim();
@@ -336,7 +336,7 @@ async function loadFromStorage() {
     });
     if (res.status === 401) {
       localStorage.removeItem(TOKEN_KEY);
-      alert("Token invalide. Recharge la page et entre un token valide.");
+      alert("Token inválido. Recarga la página e introduce un token válido.");
       renderAll(); return;
     }
     if (res.status === 404) {
@@ -350,13 +350,13 @@ async function loadFromStorage() {
         workoutData = decoded;
       }
     }
-  } catch(e) { console.warn("Pas de données GitHub, utilisation des données initiales."); }
+  } catch(e) { console.warn("No hay datos en GitHub, usando los datos iniciales."); }
   renderAll();
 }
 
 async function saveToStorage() {
   const token = getToken();
-  if (!token) { alert("Pas de token, sauvegarde impossible."); return; }
+  if (!token) { alert("Sin token, no se puede guardar."); return; }
   try {
     const check = await fetch(GITHUB_API, {
       headers: { Authorization: `token ${token}` }
@@ -365,12 +365,12 @@ async function saveToStorage() {
       const existing = await check.json();
       githubFileSha = existing.sha;
     } else if (check.status !== 404) {
-      alert("Erreur lecture GitHub : " + check.status);
+      alert("Error al leer GitHub: " + check.status);
       return;
     }
     const content = btoa(encodeURIComponent(JSON.stringify(workoutData, null, 2)).replace(/%([0-9A-F]{2})/g, (_, p1) => String.fromCharCode(parseInt(p1, 16))));
     const body = {
-      message: "Mise à jour séance",
+      message: "Actualización de sesión",
       content,
       ...(githubFileSha ? { sha: githubFileSha } : {})
     };
@@ -387,10 +387,10 @@ async function saveToStorage() {
       githubFileSha = json.content.sha;
     } else {
       const err = await res.text();
-      console.error("Erreur GitHub:", err);
-      alert("Erreur sauvegarde : " + err);
+      console.error("Error de GitHub:", err);
+      alert("Error al guardar: " + err);
     }
-  } catch(e) { console.error("Erreur sauvegarde:", e); }
+  } catch(e) { console.error("Error al guardar:", e); }
 }
 
 function totalSessions() {
@@ -431,12 +431,12 @@ function renderPanel(key) {
         <span class="pill" style="background:${def.colorBg};border:1px solid ${def.colorBorder};color:${def.color}">
           ${d}
           <span class="pill-actions">
-            <button class="pill-btn" style="color:${def.color}" onclick="editSession('${key}',${si})" title="Éditer">✏️</button>
-            <button class="pill-btn" style="color:var(--red)" onclick="deleteSession('${key}',${si})" title="Supprimer">🗑️</button>
+            <button class="pill-btn" style="color:${def.color}" onclick="editSession('${key}',${si})" title="Editar">✏️</button>
+            <button class="pill-btn" style="color:var(--red)" onclick="deleteSession('${key}',${si})" title="Eliminar">🗑️</button>
           </span>
         </span>`).join("")}
     </div>
-    <button class="add-btn" onclick="openModal('${key}')">+ Ajouter une séance</button>
+    <button class="add-btn" onclick="openModal('${key}')">+ Añadir sesión</button>
     <div class="section-title">Ejercicios</div>
   `;
 
@@ -496,7 +496,7 @@ function renderPanel(key) {
         <div class="ex-card-header" onclick="toggleCard('${key}','${ex.id}')">
           <div>
             <div class="ex-name">${ex.name}</div>
-            <div class="ex-series">${ex.sets} séries</div>
+            <div class="ex-series">${ex.sets} series</div>
           </div>
           <div style="display:flex;align-items:center;gap:6px;">
             <span class="badge" style="background:${mc.bg};color:${mc.text};border:1px solid ${mc.border}">${ex.muscle}</span>
@@ -555,7 +555,7 @@ function editSession(key, si) {
 }
 
 async function deleteSession(key, si) {
-  if (!confirm(`Supprimer la séance du ${workoutData[key].sessions[si]} ?`)) return;
+  if (!confirm(`¿Eliminar la sesión del ${workoutData[key].sessions[si]}?`)) return;
   workoutData[key].sessions.splice(si, 1);
   SESSIONS_DEF[key].exercises.forEach(ex => {
     if (workoutData[key].data[ex.id]) {
@@ -589,10 +589,10 @@ function updateFormVal(exId, setIdx, field, val) {
 
 function renderModal() {
   const def = SESSIONS_DEF[formSession];
-  document.getElementById("modal-title").textContent = step==="confirm" ? "Confirmer ?" : (editIndex !== null ? "Éditer séance" : "Nouvelle séance");
+  document.getElementById("modal-title").textContent = step==="confirm" ? "¿Confirmar?" : (editIndex !== null ? "Editar sesión" : "Nueva sesión");
 
   if (step === "saved") {
-    document.getElementById("modal-body").innerHTML = `<div class="saved-msg">✓ Séance enregistrée !</div>`;
+    document.getElementById("modal-body").innerHTML = `<div class="saved-msg">✓ ¡Sesión guardada!</div>`;
     return;
   }
 
@@ -607,12 +607,12 @@ function renderModal() {
 
     document.getElementById("modal-body").innerHTML = `
       <div class="confirm-summary">
-        <div style="color:${def.color};font-weight:600;margin-bottom:10px;">Séance ${formSession} · ${formDate}</div>
+        <div style="color:${def.color};font-weight:600;margin-bottom:10px;">Sesión ${formSession} · ${formDate}</div>
         ${exBlocks}
       </div>
       <div class="confirm-actions">
-        <button class="btn-back" onclick="step='form';renderModal()">Modifier</button>
-        <button class="btn-save" style="background:${def.colorBg};border:1px solid ${def.colorBorder};color:${def.color}" onclick="saveSession()">Enregistrer ✓</button>
+        <button class="btn-back" onclick="step='form';renderModal()">Modificar</button>
+        <button class="btn-save" style="background:${def.colorBg};border:1px solid ${def.colorBorder};color:${def.color}" onclick="saveSession()">Guardar ✓</button>
       </div>
     `;
     return;
@@ -646,17 +646,17 @@ function renderModal() {
 
   document.getElementById("modal-body").innerHTML = `
     <div style="margin-bottom:0.875rem;">
-      <label class="form-label">Séance</label>
+      <label class="form-label">Sesión</label>
       <div class="session-selector">${sessButtons}</div>
     </div>
     <div style="margin-bottom:0.875rem;">
-      <label class="form-label">Date</label>
+      <label class="form-label">Fecha</label>
       <input class="form-input" type="text" placeholder="ex. 26 May" value="${formDate}"
         oninput="formDate=this.value;updateNextBtn()" id="date-input" />
     </div>
-    <div class="section-title">Séries</div>
+    <div class="section-title">Series</div>
     ${exFields}
-    <button class="next-btn ${formDate.trim()?"ready":""}" id="next-btn" onclick="goConfirm()">Suivant →</button>
+    <button class="next-btn ${formDate.trim()?"ready":""}" id="next-btn" onclick="goConfirm()">Siguiente →</button>
   `;
 }
 
