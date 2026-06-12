@@ -346,7 +346,9 @@ async function loadFromStorage() {
       const json = await res.json();
       githubFileSha = json.sha;
       const decoded = JSON.parse(decodeURIComponent(escape(atob(json.content.replace(/\n/g, "")))));
-      workoutData = decoded;
+      if (decoded && decoded.A && decoded.B && decoded.C) {
+        workoutData = decoded;
+      }
     }
   } catch(e) { console.warn("Pas de données GitHub, utilisation des données initiales."); }
   renderAll();
