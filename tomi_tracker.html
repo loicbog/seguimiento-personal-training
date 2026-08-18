@@ -456,13 +456,19 @@ function renderPanel(key) {
     const mc = MUSCLE_COLORS[ex.muscle] || MUSCLE_COLORS.Pecho;
     // sessions data: array of sessions, each = array of sets
     const sessionsSets = data.data[ex.id] || [];
+    // hide columns before the exercise existed (null entries), so new exercises
+    // don't show a wall of empty dash columns for past dates
+    const firstIdx = sessionsSets.findIndex(s => s != null);
+    const startIdx = firstIdx === -1 ? Math.max(dates.length - 1, 0) : firstIdx;
+    const exDates = dates.slice(startIdx);
 
     // Build rows: one row per set
     let bodyRows = "";
     for (let s = 0; s < ex.sets; s++) {
       bodyRows += `<tr>`;
       bodyRows += `<td class="td-serie">S${s+1}</td>`;
-      dates.forEach((_, si) => {
+      exDates.forEach((_, siOffset) => {
+        const si = startIdx + siOffset;
         const sets = sessionsSets[si] || [];
         const entry = sets[s] || { c:"—", r:"—" };
         const prevSets = sessionsSets[si-1] || [];
@@ -518,7 +524,7 @@ function renderPanel(key) {
           <table>
             <thead><tr>
               <th class="th-serie"></th>
-              ${dates.map(d=>`<th>${d}</th>`).join("")}
+              ${exDates.map(d=>`<th>${d}</th>`).join("")}
             </tr></thead>
             <tbody>${bodyRows}</tbody>
           </table>
