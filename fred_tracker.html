@@ -139,6 +139,10 @@ const SESSIONS_DEF = {
     label: "A · Piernas", color: "#FF6B35",
     colorBg: "rgba(255,107,53,0.1)", colorBorder: "rgba(255,107,53,0.3)",
     exercises: [
+      { id: "squatsA",          name: "Squats",                sets: 3, muscle: "Pierna" },
+      { id: "inclinedbenchA",   name: "Inclinés benchpress",   sets: 3, muscle: "Pecho" },
+      { id: "tirajehorizontalA", name: "Tirage horizontal",    sets: 3, muscle: "Espalda" },
+      { id: "elevlateralesA",   name: "Élévations latérales",  sets: 3, muscle: "Hombro" },
       { id: "squats",       name: "Bulgaria Split", sets: 4, muscle: "Pierna" },
       { id: "legcurl",      name: "Leg curl",      sets: 4, muscle: "Pierna" },
       { id: "legextension", name: "Leg extensión", sets: 4, muscle: "Pierna" },
@@ -149,6 +153,11 @@ const SESSIONS_DEF = {
     label: "B · Pecho", color: "#4CC9F0",
     colorBg: "rgba(76,201,240,0.1)", colorBorder: "rgba(76,201,240,0.3)",
     exercises: [
+      { id: "tractionslargesB", name: "Tractions prises large", sets: 4, muscle: "Espalda" },
+      { id: "devmilitaireB",    name: "Développés militaires",  sets: 3, muscle: "Hombro" },
+      { id: "bulgarianB",       name: "Bulgarian Split Squats", sets: 3, muscle: "Pierna" },
+      { id: "pecdeckB",         name: "Pec Deck",               sets: 3, muscle: "Pecho" },
+      { id: "bayesiancurlB",    name: "Bayesian Curl",          sets: 3, muscle: "Bíceps" },
       { id: "press",     name: "Press",            sets: 4, muscle: "Pecho" },
       { id: "flexion",   name: "Flexión",          sets: 4, muscle: "Pecho" },
       { id: "butterfly", name: "Butterfly cable",  sets: 4, muscle: "Pecho" },
@@ -159,6 +168,11 @@ const SESSIONS_DEF = {
     label: "C · Espalda", color: "#A8DADC",
     colorBg: "rgba(168,218,220,0.1)", colorBorder: "rgba(168,218,220,0.3)",
     exercises: [
+      { id: "dipsC",          name: "Dips",                  sets: 3, muscle: "Pecho" },
+      { id: "deadliftC",      name: "Deadlift",              sets: 3, muscle: "Espalda" },
+      { id: "shrugsC",        name: "Trapèzes shrugs",       sets: 3, muscle: "Espalda" },
+      { id: "adductoresC",    name: "Adducteurs",            sets: 3, muscle: "Pierna" },
+      { id: "tricepsropeC",   name: "Triceps pushdown rope", sets: 3, muscle: "Tríceps" },
       { id: "dominadas",   name: "Dominadas",            sets: 5, muscle: "Espalda" },
       { id: "remo",        name: "Remo con mancuerna",   sets: 4, muscle: "Espalda" },
       { id: "hombros",     name: "Militar Overhead Press", sets: 4, muscle: "Hombro" },
@@ -405,13 +419,19 @@ function renderPanel(key) {
     const mc = MUSCLE_COLORS[ex.muscle] || MUSCLE_COLORS.Pecho;
     // sessions data: array of sessions, each = array of sets
     const sessionsSets = data.data[ex.id] || [];
+    // hide columns before the exercise existed (null entries), so new exercises
+    // don't show a wall of empty dash columns for past dates
+    const firstIdx = sessionsSets.findIndex(s => s != null);
+    const startIdx = firstIdx === -1 ? dates.length : firstIdx;
+    const exDates = dates.slice(startIdx);
 
     // Build rows: one row per set
     let bodyRows = "";
     for (let s = 0; s < ex.sets; s++) {
       bodyRows += `<tr>`;
       bodyRows += `<td class="td-serie">S${s+1}</td>`;
-      dates.forEach((_, si) => {
+      exDates.forEach((_, siOffset) => {
+        const si = startIdx + siOffset;
         const sets = sessionsSets[si] || [];
         const entry = sets[s] || { c:"—", r:"—" };
         const prevSets = sessionsSets[si-1] || [];
@@ -444,13 +464,13 @@ function renderPanel(key) {
           </div>
         </div>
         <div class="prog-table" style="display:${isOpen?"block":"none"}">
-          <table>
+          ${exDates.length === 0 ? `<div class="dash" style="padding:0.75rem 1rem;font-size:11px;">Pas encore de séance</div>` : `<table>
             <thead><tr>
               <th class="th-serie"></th>
-              ${dates.map(d=>`<th>${d}</th>`).join("")}
+              ${exDates.map(d=>`<th>${d}</th>`).join("")}
             </tr></thead>
             <tbody>${bodyRows}</tbody>
-          </table>
+          </table>`}
         </div>
       </div>
     `;
@@ -644,7 +664,10 @@ async function saveSession() {
         r: (s.r||"").trim() || "—",
       }));
       if (!workoutData[key].data[ex.id]) workoutData[key].data[ex.id] = [];
-      workoutData[key].data[ex.id].push(sets);
+      const arr = workoutData[key].data[ex.id];
+      // pad exercises added after earlier sessions so indexes stay aligned with dates
+      while (arr.length < workoutData[key].sessions.length - 1) arr.push(null);
+      arr.push(sets);
     });
   }
   await saveToStorage();
